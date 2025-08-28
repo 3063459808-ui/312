@@ -1,0 +1,5 @@
+The sun is a star.
+The capital of France is Paris.
+Elephants are the largest land animals.
+The earth revolves around the sun.
+Python is a popular programming language.
