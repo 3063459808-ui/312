@@ -7,24 +7,38 @@ from fastapi import HTTPException
 class NewsService:
     def __init__(self):
         self.rss_url = "http://www.xinhuanet.com/world/news_world.xml"
+        self.headlines_cache = []
 
     def get_headlines(self) -> list[dict]:
         """
-        Fetches and parses the RSS feed to get latest headlines.
-        Returns a list of dictionaries, e.g., [{"title": "...", "link": "..."}]
+        Returns the cached list of headlines.
+        """
+        if not self.headlines_cache:
+            # If cache is empty, fetch immediately as a fallback.
+            self.update_headlines_cache()
+        return self.headlines_cache
+
+    def update_headlines_cache(self):
+        """
+        Fetches news from the RSS feed and updates the in-memory cache.
+        This method is designed to be called by a scheduler.
         """
         try:
             feed = feedparser.parse(self.rss_url)
             if feed.bozo:
-                raise HTTPException(status_code=500, detail=f"Failed to parse RSS feed: {feed.bozo_exception}")
+                # In a real app, you'd log this error.
+                print(f"Error parsing RSS feed: {feed.bozo_exception}")
+                return
 
-            headlines = []
-            for entry in feed.entries[:15]: # Get top 15
-                headlines.append({"title": entry.title, "link": entry.link})
-            return headlines
+            # Using a list comprehension for a more concise version
+            latest_headlines = [
+                {"title": entry.title, "link": entry.link}
+                for entry in feed.entries[:15] # Get top 15
+            ]
+            self.headlines_cache = latest_headlines
+            print("Headlines cache updated successfully.")
         except Exception as e:
-            # This catches potential network errors from feedparser's side
-            raise HTTPException(status_code=500, detail=f"Error fetching RSS feed: {e}")
+            print(f"Error updating headlines cache: {e}")
 
 
     def get_summary(self, url: str) -> dict:

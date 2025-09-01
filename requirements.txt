@@ -1,3 +1,8 @@
 fastapi
 uvicorn[standard]
-httpx
+requests
+feedparser
+beautifulsoup4
+lxml
+APScheduler
+Jinja2

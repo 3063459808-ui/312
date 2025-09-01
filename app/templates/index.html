@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日新闻摘要</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #headlines {
+            width: 40%;
+            border-right: 1px solid #eee;
+            padding: 20px;
+            overflow-y: auto;
+            height: 90vh;
+        }
+        #summary {
+            width: 60%;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #444;
+            border-bottom: 2px solid #5c67f2;
+            padding-bottom: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        li:hover {
+            background-color: #f9f9f9;
+        }
+        li.active {
+            background-color: #e8eaf6;
+            font-weight: bold;
+        }
+        #summary-content {
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5c67f2;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 50px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="headlines">
+            <h1>新闻头条</h1>
+            <ul id="headlines-list">
+                <div class="loader"></div>
+            </ul>
+        </div>
+        <div id="summary">
+            <h2>文章摘要</h2>
+            <div id="summary-content">
+                <p>请从左侧选择一篇文章来阅读摘要。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const headlinesList = document.getElementById('headlines-list');
+            const summaryContent = document.getElementById('summary-content');
+            let articles = [];
+
+            async function fetchHeadlines() {
+                try {
+                    const response = await fetch('/news/headlines');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    articles = await response.json();
+
+                    headlinesList.innerHTML = ''; // Clear loader
+                    articles.forEach((article, index) => {
+                        const li = document.createElement('li');
+                        li.textContent = article.title;
+                        li.dataset.index = index;
+                        li.dataset.url = article.link;
+                        headlinesList.appendChild(li);
+                    });
+                } catch (error) {
+                    headlinesList.innerHTML = '<p>无法加载新闻头条，请稍后刷新重试。</p>';
+                    console.error('Fetch headlines error:', error);
+                }
+            }
+
+            async function fetchSummary(url, targetLi) {
+                summaryContent.innerHTML = '<div class="loader"></div>';
+
+                // Remove active class from any previously active list item
+                const activeItem = headlinesList.querySelector('.active');
+                if (activeItem) {
+                    activeItem.classList.remove('active');
+                }
+                // Add active class to the clicked item
+                targetLi.classList.add('active');
+
+                try {
+                    const response = await fetch(`/news/summarize?url=${encodeURIComponent(url)}`);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    summaryContent.innerHTML = `<p>${data.summary || "未能生成摘要。"}</p>`;
+                } catch (error) {
+                    summaryContent.innerHTML = `<p>无法获取摘要: ${error.message}</p>`;
+                    console.error('Fetch summary error:', error);
+                }
+            }
+
+            headlinesList.addEventListener('click', (event) => {
+                if (event.target && event.target.nodeName === 'LI') {
+                    const url = event.target.dataset.url;
+                    if (url) {
+                        fetchSummary(url, event.target);
+                    }
+                }
+            });
+
+            fetchHeadlines();
+        });
+    </script>
+
+</body>
+</html>
